@@ -892,7 +892,7 @@ let frenzyUntil = 0, busyUntil = 0, lastBellows = 0, bellowsFx = 0;
 const frenzyOn = () => now() < frenzyUntil;
 function newShield(lin){ return {id:S.nid++, lin, lvl:0, aw:{}, heat:100, fz:0, pity:0, last:false}; }
 const heatOK = sw => sw && sw.heat >= 20;
-function zoneW(sw){ const h = sw ? sw.heat : 100; return (.28 + S.hammer*.035)*(.45+.55*h/100); }
+function zoneW(sw){ const h = sw ? sw.heat : 100; return (.28 + S.hammer*.035)*(.45+.55*h/100)*(TUT.on?1.7:1); }
 function angDist(a,b){ let d = Math.abs(((a-b)%TAU+TAU)%TAU); return Math.min(d, TAU-d); }
 function judge(sw){ if(!heatOK(sw)) return 'M'; const w = zoneW(sw), d = angDist(ring.ang, ring.zone); if(d <= w*.3) return 'P'; if(d <= w) return 'G'; return 'M'; }
 function odds(L,timing,sw,fz){
@@ -1131,7 +1131,7 @@ function tutEvent(type,arg){ const w = TUT.wait; if(!TUT.on || !w) return;
   if(w.type==='strike' && type==='strike' && (arg!=='M' || w.any)){ TUT.wait = null; setTimeout(() => w.res('ok'), 650); }
   if(w.type==='bellows' && type==='bellows' && S.anvil && S.anvil.heat >= 60){ TUT.wait = null; setTimeout(() => w.res('ok'), 300); }
   if(w.type==='lvl' && type==='strike' && S.anvil && S.anvil.lvl >= w.v){ TUT.wait = null; setTimeout(() => w.res('ok'), 3000); }
-  if(w.type==='strike' && type==='strike' && arg==='M'){ $('coachDo') && ($('coachDo').textContent = '앗, 빗나갔다! 바늘이 금색일 때 다시 👆'); }
+  if(w.type==='strike' && type==='strike' && arg==='M'){ $('coachDo') && ($('coachDo').textContent = (S.anvil && S.anvil.heat < 20) ? '❄ 방패가 식었다! 풀무부터 눌러라 🔥' : '앗, 빗나갔다! 바늘이 초록·금색 구간일 때 다시 👆'); }
 }
 function placeCoach(){
   if(!TUT.sel) return; const el = document.querySelector(TUT.sel); if(!el) return; const r = el.getBoundingClientRect(), pad = 8, h = $('coachHole'), b = $('coachBox');
@@ -1185,7 +1185,7 @@ function arcPath(r,a0,a1){ const x0 = r*Math.sin(a0), y0 = -r*Math.cos(a0), x1 =
 (function ticks(){ let h = ''; for(let i=0;i<36;i++){ const a = i/36*TAU, r1 = 92, r2 = i%3?95:97; h += `<line class="tick" x1="${(Math.sin(a)*r1).toFixed(1)}" y1="${(-Math.cos(a)*r1).toFixed(1)}" x2="${(Math.sin(a)*r2).toFixed(1)}" y2="${(-Math.cos(a)*r2).toFixed(1)}"/>`; } $('ticks').innerHTML = h; })();
 function updateDial(dt){
   const sw = S.anvil, fz = frenzyOn();
-  ring.speed = (1.9 + (sw?sw.lvl:0)*.16)*(fz?.7:1);
+  ring.speed = (1.9 + (sw?sw.lvl:0)*.16)*(fz?.7:1)*(TUT.on?.75:1);
   ring.ang = (ring.ang + ring.speed*dt) % TAU;
   $('needle').setAttribute('transform', `rotate(${(ring.ang*180/Math.PI).toFixed(2)})`);
   const w = zoneW(sw); $('zoneArc').setAttribute('d', arcPath(104, ring.zone-w, ring.zone+w)); $('pArc').setAttribute('d', arcPath(104, ring.zone-w*.3, ring.zone+w*.3));
@@ -1229,7 +1229,8 @@ let last = performance.now()/1000, fzWas = false;
 function loop(ms){
   const t = ms/1000, dt = Math.min(.05, t-last); last = t;
   const sw = S.anvil;
-  if(sw && !frenzyOn()) sw.heat = Math.max(0, sw.heat - dt*(4.5-S.bellows*.5));
+  if(sw && !frenzyOn() && !(TUT.on && !(TUT.wait && TUT.wait.type==='bellows'))) sw.heat = Math.max(0, sw.heat - dt*(4.5-S.bellows*.5));
+  if(sw && TUT.on && !(TUT.wait && TUT.wait.type==='bellows')) sw.heat = Math.max(sw.heat, 75);
   bellowsFx = Math.max(0, bellowsFx-dt*2.5);
   if(TUT.sel && $('coach').classList.contains('show')) placeCoach();
   if(curTab==='forge'){ updateDial(dt); if(G.ok) update3D(dt,t); else draw2D(t); }
